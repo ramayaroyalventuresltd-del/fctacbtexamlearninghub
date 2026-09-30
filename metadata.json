@@ -1,0 +1,8 @@
+{
+  "name": "Fctacbtexamhub",
+  "description": "FCTA CBT EXAM HUB - Comprehensive Computer Based Test (CBT) portal for FCTA civil service staff promotion and evaluation exams with 4 difficulty levels, unlimited question bank, Recharts progress visualization, and administrative controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

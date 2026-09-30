@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role-based access control and civil service cadre details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique user ID" },
+        "username": { "type": "string", "description": "Unique login username" },
+        "fullName": { "type": "string", "description": "Full name of the officer" },
+        "email": { "type": "string", "format": "email", "description": "Official or personal email" },
+        "staffId": { "type": "string", "description": "FCTA Staff / File Number" },
+        "role": { "type": "string", "enum": ["superadmin", "admin", "candidate"], "description": "User access level" },
+        "cadre": { "type": "string", "description": "Designated cadre or professional field" },
+        "gradeLevel": { "type": "string", "description": "Civil service grade level GL 03 to GL 17" },
+        "difficultyTier": { "type": "number", "description": "Difficulty tier from 1 to 4 calculated from grade level" },
+        "createdAt": { "type": "string", "description": "ISO timestamp of registration" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp of last profile update" }
+      },
+      "required": ["id", "username", "fullName", "email", "role"]
+    },
+    "Question": {
+      "title": "Question",
+      "description": "CBT exam question bank item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique question identifier" },
+        "subject": { "type": "string", "enum": ["psr", "fr", "ppa", "fcta_gk", "cadre"], "description": "Core syllabus category" },
+        "cadre": { "type": "string", "description": "Target professional cadre if applicable" },
+        "chapterOrTopic": { "type": "string", "description": "Specific chapter or regulatory section" },
+        "difficultyTier": { "type": "number", "description": "1 (GL 03-06), 2 (GL 07-10), 3 (GL 12-14), 4 (GL 15-17)" },
+        "questionText": { "type": "string", "description": "Text of the multiple-choice question" },
+        "optionA": { "type": "string", "description": "Choice A" },
+        "optionB": { "type": "string", "description": "Choice B" },
+        "optionC": { "type": "string", "description": "Choice C" },
+        "optionD": { "type": "string", "description": "Choice D" },
+        "correctOptionIndex": { "type": "number", "description": "0 for A, 1 for B, 2 for C, 3 for D" },
+        "explanation": { "type": "string", "description": "Educational explanation and citation" },
+        "referenceDoc": { "type": "string", "description": "Formal legal or regulatory citation" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" },
+        "createdBy": { "type": "string", "description": "Admin user ID who uploaded or generated this question" }
+      },
+      "required": ["id", "subject", "difficultyTier", "questionText", "optionA", "optionB", "optionC", "optionD", "correctOptionIndex"]
+    },
+    "ExamAttempt": {
+      "title": "ExamAttempt",
+      "description": "Records candidate test attempts and scores",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Attempt ID" },
+        "userId": { "type": "string", "description": "Candidate user identifier" },
+        "cycleIndex": { "type": "number", "description": "Exam cycle sequence number" },
+        "setNumber": { "type": "number", "description": "Exam set number 1 to 4" },
+        "difficultyTier": { "type": "number", "description": "Difficulty level 1 to 4" },
+        "durationMinutes": { "type": "number", "description": "Chosen time limit: 30, 45, or 60 minutes" },
+        "score": { "type": "number", "description": "Number of correct answers out of total" },
+        "totalQuestions": { "type": "number", "description": "Total count of questions (100)" },
+        "percentage": { "type": "number", "description": "Score percentage" },
+        "passed": { "type": "boolean", "description": "True if percentage is at least 70%" },
+        "status": { "type": "string", "enum": ["in_progress", "completed", "abandoned"], "description": "Test status" },
+        "startedAt": { "type": "string", "description": "Timestamp when test began" },
+        "completedAt": { "type": "string", "description": "Timestamp when test was submitted" }
+      },
+      "required": ["id", "userId", "cycleIndex", "setNumber", "difficultyTier", "durationMinutes", "totalQuestions", "status"]
+    },
+    "UserProgress": {
+      "title": "UserProgress",
+      "description": "Tracks progression across sets and previously answered questions to prevent duplicates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Matches candidate userId" },
+        "userId": { "type": "string", "description": "Candidate user identifier" },
+        "currentCycle": { "type": "number", "description": "Active exam cycle" },
+        "unlockedSet": { "type": "number", "description": "Highest set number currently unlocked (1 to 4)" },
+        "completedCycleCount": { "type": "number", "description": "Count of successfully passed complete 4-set cycles" },
+        "updatedAt": { "type": "string", "description": "Timestamp of last update" }
+      },
+      "required": ["id", "userId", "currentCycle", "unlockedSet"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profiles including role and civil service cadre data"
+    },
+    "/questions/{questionId}": {
+      "schema": { "$ref": "#/entities/Question" },
+      "description": "Central unlimited question bank for PSR, FR, PPA, GK, and professional cadres"
+    },
+    "/attempts/{attemptId}": {
+      "schema": { "$ref": "#/entities/ExamAttempt" },
+      "description": "Completed and in-progress CBT exam attempts"
+    },
+    "/progress/{userId}": {
+      "schema": { "$ref": "#/entities/UserProgress" },
+      "description": "Candidate progression tracking across difficulty sets and exam cycles"
+    }
+  }
+}

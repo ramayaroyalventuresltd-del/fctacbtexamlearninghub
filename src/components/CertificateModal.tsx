@@ -6,7 +6,7 @@ interface CertificateModalProps {
   isOpen: boolean;
   onClose: () => void;
   attempt: ExamAttempt;
-  user: UserProfile;
+  user?: UserProfile;
 }
 
 export const CertificateModal: React.FC<CertificateModalProps> = ({
@@ -16,6 +16,11 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
   user
 }) => {
   if (!isOpen) return null;
+
+  const candidateName = user?.fullName || attempt.staffName || 'Officer Candidate';
+  const candidateStaffId = user?.staffId || attempt.staffId || 'FCTA/CBT';
+  const candidateCadre = user?.cadre || attempt.cadre || 'Administrative Officer';
+  const candidateGradeLevel = user?.gradeLevel || attempt.gradeLevel || 'GL 08';
 
   // Generate deterministic serial hash
   const certSerial = `FCTA-CBT-${attempt.cycleIndex}-${attempt.setNumber}-${attempt.userId.substring(0, 6).toUpperCase()}-${attempt.score}`;
@@ -100,15 +105,15 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
             </p>
 
             <div className="text-2xl sm:text-3xl font-black text-amber-400 print:text-amber-700 tracking-tight">
-              {attempt.staffName || user.fullName}
+              {candidateName}
             </div>
 
             <div className="text-xs text-slate-300 print:text-slate-700 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-              <span><strong>Staff File No:</strong> {attempt.staffId || user.staffId}</span>
+              <span><strong>Staff File No:</strong> {candidateStaffId}</span>
               <span>•</span>
-              <span><strong>Cadre:</strong> {attempt.cadre || user.cadre}</span>
+              <span><strong>Cadre:</strong> {candidateCadre}</span>
               <span>•</span>
-              <span><strong>Current Grade:</strong> {attempt.gradeLevel || user.gradeLevel}</span>
+              <span><strong>Current Grade:</strong> {candidateGradeLevel}</span>
             </div>
 
             <p className="text-xs text-slate-300 print:text-slate-700 leading-relaxed pt-2">
@@ -155,7 +160,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 print:text-emerald-600 shrink-0" />
               <span>
-                Statutory Status: <strong>PROMOTION READY</strong> to next career rank: <strong>{getNextGradeLevel(attempt.gradeLevel || user.gradeLevel)}</strong>
+                Statutory Status: <strong>PROMOTION READY</strong> to next career rank: <strong>{getNextGradeLevel(candidateGradeLevel)}</strong>
               </span>
             </div>
             <span className="text-[11px] font-mono text-emerald-400 print:text-emerald-700 font-bold">

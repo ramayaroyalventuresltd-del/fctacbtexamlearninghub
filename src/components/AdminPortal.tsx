@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { UserProfile, Question, SubjectType, ExamAttempt } from '../types';
 import { FCTA_CADRES, DIFFICULTY_TIERS } from '../data/cadresAndLevels';
 import { PsychometricAnalytics } from './PsychometricAnalytics';
-import { UserManagementConsole } from './UserManagementConsole';
 import {
   getBaseQuestionBank,
   saveQuestionToBank,
@@ -10,6 +9,7 @@ import {
   bulkUploadQuestions
 } from '../services/questionService';
 import { getAllAttempts } from '../services/examService';
+import { getAllRegisteredUsers, adminResetUserPassword } from '../services/authService';
 import {
   ShieldCheck,
   BookOpen,
@@ -19,7 +19,6 @@ import {
   Filter,
   Trash2,
   Users,
-  UserCog,
   CheckCircle2,
   Download,
   FileSpreadsheet,
@@ -28,7 +27,10 @@ import {
   BarChart3,
   Layers,
   ArrowRight,
-  FileCheck2
+  FileCheck2,
+  Edit3,
+  KeyRound,
+  Check
 } from 'lucide-react';
 
 interface AdminPortalProps {
@@ -37,7 +39,7 @@ interface AdminPortalProps {
 }
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({ currentUser, onNavigateToCbt }) => {
-  const [activeTab, setActiveTab] = useState<'bank' | 'upload' | 'attempts' | 'psychometrics' | 'users' | 'superadmin'>('bank');
+  const [activeTab, setActiveTab] = useState<'bank' | 'upload' | 'attempts' | 'psychometrics' | 'superadmin'>('bank');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,6 +61,14 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ currentUser, onNavigat
   const [newExplanation, setNewExplanation] = useState('');
   const [newRefDoc, setNewRefDoc] = useState('');
 
+  // Edit Question state
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+
+  // Users Directory state
+  const [usersList, setUsersList] = useState<UserProfile[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [resetSuccessId, setResetSuccessId] = useState<string | null>(null);
+
   // Bulk upload state
   const [bulkText, setBulkText] = useState('');
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
@@ -70,11 +80,30 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ currentUser, onNavigat
     setQuestions([...qList]);
     const attList = await getAllAttempts();
     setAttempts(attList);
+    const uList = getAllRegisteredUsers();
+    setUsersList(uList);
   };
 
   useEffect(() => {
     reloadData();
   }, []);
+
+  const handleSaveEditedQuestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingQuestion) return;
+    await saveQuestionToBank(editingQuestion);
+    setEditingQuestion(null);
+    reloadData();
+  };
+
+  const handleAdminResetPassword = (userId: string) => {
+    const success = adminResetUserPassword(userId, 'password123');
+    if (success) {
+      setResetSuccessId(userId);
+      setTimeout(() => setResetSuccessId(null), 4000);
+      reloadData();
+    }
+  };
 
   // Filtered questions
   const filteredQuestions = useMemo(() => {
@@ -285,18 +314,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ currentUser, onNavigat
         </button>
 
         <button
-          onClick={() => setActiveTab('users')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-            activeTab === 'users'
-              ? 'bg-amber-600 text-white shadow-md shadow-amber-950/40'
-              : 'bg-slate-900 text-slate-400 hover:text-white'
-          }`}
-        >
-          <UserCog className="w-4 h-4" />
-          User Management Console
-        </button>
-
-        <button
           onClick={() => setActiveTab('psychometrics')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
             activeTab === 'psychometrics'
@@ -441,13 +458,22 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ currentUser, onNavigat
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => handleDelete(q.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition"
-                          title="Delete question"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setEditingQuestion({ ...q })}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-emerald-950/40 transition"
+                            title="Edit question & citations"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(q.id)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition"
+                            title="Delete question"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -663,11 +689,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ currentUser, onNavigat
         <PsychometricAnalytics attempts={attempts} questions={questions} />
       )}
 
-      {/* TAB: USER MANAGEMENT CONSOLE */}
-      {activeTab === 'users' && (
-        <UserManagementConsole currentUser={currentUser} />
-      )}
-
       {/* TAB 5: SUPER ADMIN PRIVILEGES (Freelander) */}
       {isSuperAdmin && activeTab === 'superadmin' && (
         <div className="bg-slate-900 border border-purple-500/30 rounded-2xl p-6 shadow-xl space-y-6">
@@ -692,13 +713,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ currentUser, onNavigat
                 <strong>Administrator:</strong> system (password: 123456 - Question management & review)<br />
                 <strong>Candidates:</strong> Registered FCTA officers (Exam and practice access)
               </p>
-              <button
-                onClick={() => setActiveTab('users')}
-                className="mt-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 transition"
-              >
-                <UserCog className="w-3.5 h-3.5" />
-                Launch User Management Console
-              </button>
             </div>
 
             <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
@@ -713,6 +727,106 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ currentUser, onNavigat
                 <Download className="w-3.5 h-3.5" />
                 Download System Snapshot
               </button>
+            </div>
+          </div>
+
+          {/* Registered Staff & Candidate Management Directory */}
+          <div className="bg-slate-950 rounded-2xl border border-slate-800 p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Users className="w-4 h-4 text-purple-400" />
+                  Staff Candidate Directory & Account Administration
+                </h4>
+                <p className="text-xs text-slate-400">
+                  Manage registered FCTA officers, inspect cadres, and administer credentials.
+                </p>
+              </div>
+
+              <div className="relative w-full sm:w-64">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Search staff, name, file no..."
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+
+            {resetSuccessId && (
+              <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Password successfully reset for selected officer to default: <strong>password123</strong></span>
+              </div>
+            )}
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-900 uppercase font-semibold text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th className="py-2.5 px-3">Officer Name / File No</th>
+                    <th className="py-2.5 px-3">Username & Email</th>
+                    <th className="py-2.5 px-3">Cadre</th>
+                    <th className="py-2.5 px-3">Grade Level</th>
+                    <th className="py-2.5 px-3">Role</th>
+                    <th className="py-2.5 px-3 text-right">Account Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {usersList
+                    .filter((u) => {
+                      if (!userSearchQuery.trim()) return true;
+                      const q = userSearchQuery.toLowerCase();
+                      return (
+                        u.fullName.toLowerCase().includes(q) ||
+                        u.staffId.toLowerCase().includes(q) ||
+                        u.username.toLowerCase().includes(q) ||
+                        u.email.toLowerCase().includes(q)
+                      );
+                    })
+                    .map((usr) => (
+                      <tr key={`usr_${usr.id}`} className="hover:bg-slate-900/40 transition">
+                        <td className="py-2.5 px-3">
+                          <div className="font-bold text-white">{usr.fullName}</div>
+                          <div className="text-[11px] font-mono text-slate-400">{usr.staffId}</div>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <div className="text-white font-mono">{usr.username}</div>
+                          <div className="text-[11px] text-slate-400">{usr.email}</div>
+                        </td>
+                        <td className="py-2.5 px-3">{usr.cadre}</td>
+                        <td className="py-2.5 px-3">
+                          <span className="font-bold text-emerald-400">{usr.gradeLevel}</span>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              usr.role === 'superadmin'
+                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                : usr.role === 'admin'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                : 'bg-slate-800 text-slate-300'
+                            }`}
+                          >
+                            {usr.role}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <button
+                            onClick={() => handleAdminResetPassword(usr.id)}
+                            className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-semibold text-slate-300 hover:text-white transition inline-flex items-center gap-1"
+                            title="Reset password to password123"
+                          >
+                            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Reset Pwd</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -882,6 +996,191 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ currentUser, onNavigat
                   className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase tracking-wider"
                 >
                   Save Question
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT QUESTION MODAL */}
+      {editingQuestion && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-emerald-400" />
+                Edit Regulatory Exam Question & Citations
+              </h3>
+              <button
+                onClick={() => setEditingQuestion(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditedQuestion} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Subject</label>
+                  <select
+                    value={editingQuestion.subject}
+                    onChange={(e) =>
+                      setEditingQuestion({ ...editingQuestion, subject: e.target.value as SubjectType })
+                    }
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  >
+                    <option value="psr">Public Service Rules (PSR)</option>
+                    <option value="fr">Financial Regulations (FR)</option>
+                    <option value="ppa">Public Procurement Act (PPA)</option>
+                    <option value="fcta_gk">FCTA General Knowledge</option>
+                    <option value="cadre">Cadre Specific</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Difficulty Tier</label>
+                  <select
+                    value={editingQuestion.difficultyTier}
+                    onChange={(e) =>
+                      setEditingQuestion({ ...editingQuestion, difficultyTier: Number(e.target.value) })
+                    }
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  >
+                    <option value={1}>Tier 1: Junior (GL 03-06)</option>
+                    <option value={2}>Tier 2: Officer (GL 07-10)</option>
+                    <option value={3}>Tier 3: Senior (GL 12-14)</option>
+                    <option value={4}>Tier 4: Directorate (GL 15-17)</option>
+                  </select>
+                </div>
+
+                {editingQuestion.subject === 'cadre' && (
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Cadre</label>
+                    <select
+                      value={editingQuestion.cadre || FCTA_CADRES[0].name}
+                      onChange={(e) =>
+                        setEditingQuestion({ ...editingQuestion, cadre: e.target.value })
+                      }
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white truncate"
+                    >
+                      {FCTA_CADRES.map((c) => (
+                        <option key={c.id} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Chapter, Module or Subject Topic
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editingQuestion.chapterOrTopic}
+                  onChange={(e) =>
+                    setEditingQuestion({ ...editingQuestion, chapterOrTopic: e.target.value })
+                  }
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Question Text (Stem)
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={editingQuestion.questionText}
+                  onChange={(e) =>
+                    setEditingQuestion({ ...editingQuestion, questionText: e.target.value })
+                  }
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-slate-300 font-semibold">Multiple Choice Options</label>
+                {(['optionA', 'optionB', 'optionC', 'optionD'] as const).map((optKey, idx) => (
+                  <div key={optKey} className="flex items-center gap-2">
+                    <span className="w-6 font-mono font-bold text-slate-400 text-center">
+                      {['A', 'B', 'C', 'D'][idx]}:
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={editingQuestion[optKey]}
+                      onChange={(e) =>
+                        setEditingQuestion({ ...editingQuestion, [optKey]: e.target.value })
+                      }
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-white"
+                    />
+                    <label className="flex items-center gap-1 cursor-pointer bg-slate-950 border border-slate-800 px-2 py-1 rounded-lg">
+                      <input
+                        type="radio"
+                        name="edit_correct_option"
+                        checked={editingQuestion.correctOptionIndex === idx}
+                        onChange={() =>
+                          setEditingQuestion({ ...editingQuestion, correctOptionIndex: idx })
+                        }
+                        className="text-emerald-500"
+                      />
+                      <span className="text-[10px] font-bold text-slate-300">Correct</span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Statutory Legal Reference (e.g. PSR 030301)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingQuestion.referenceDoc}
+                    onChange={(e) =>
+                      setEditingQuestion({ ...editingQuestion, referenceDoc: e.target.value })
+                    }
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Explanation for Candidates
+                  </label>
+                  <input
+                    type="text"
+                    value={editingQuestion.explanation}
+                    onChange={(e) =>
+                      setEditingQuestion({ ...editingQuestion, explanation: e.target.value })
+                    }
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingQuestion(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-wider"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>

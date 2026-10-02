@@ -368,7 +368,7 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
       )}
 
       {/* ISO 9001 Certificate Modal */}
-      {showCertificate && currentUser && (
+      {showCertificate && (
         <CertificateModal
           isOpen={showCertificate}
           attempt={attempt}

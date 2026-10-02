@@ -38,7 +38,8 @@ export const ExamRunner: React.FC<ExamRunnerProps> = ({
   difficultyTier,
   durationMinutes,
   cadreName,
-  onFinishExam
+  onFinishExam,
+  onCancelExam
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -48,6 +49,7 @@ export const ExamRunner: React.FC<ExamRunnerProps> = ({
 
   // Tools & Modals
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [showScratchpad, setShowScratchpad] = useState(false);
   const [showMobilePalette, setShowMobilePalette] = useState(false);
@@ -369,6 +371,16 @@ export const ExamRunner: React.FC<ExamRunnerProps> = ({
             >
               <LayoutGrid className="w-4 h-4 text-emerald-400" />
               <span className="text-[11px] font-mono font-bold hidden xs:inline">{currentIndex + 1}/100</span>
+            </button>
+
+            {/* Exit/Cancel Button */}
+            <button
+              onClick={() => setShowExitModal(true)}
+              className={`p-2 rounded-xl border text-xs text-slate-400 hover:text-rose-400 hover:border-rose-500/50 hover:bg-rose-950/20 transition min-h-[38px] min-w-[38px] flex items-center justify-center ${themeStyles.subCard}`}
+              title="Cancel / Exit Examination"
+              aria-label="Exit examination"
+            >
+              <X className="w-4 h-4" />
             </button>
 
             {/* Submit Button */}
@@ -948,6 +960,40 @@ export const ExamRunner: React.FC<ExamRunnerProps> = ({
                 className="w-full sm:flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-950/40 transition min-h-[44px]"
               >
                 Confirm Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exit Examination Sitting Modal */}
+      {showExitModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 text-white shadow-2xl">
+            <h3 className="text-lg font-black text-rose-400 flex items-center gap-2 mb-2">
+              Exit CBT Examination Sitting?
+            </h3>
+            <p className="text-xs text-slate-300 mb-4 leading-relaxed">
+              Are you sure you want to cancel and exit Exam Set {setNumber}? Any answers selected during this sitting will not be submitted or recorded.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => setShowExitModal(false)}
+                className="w-full sm:flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition min-h-[44px]"
+              >
+                Continue Exam
+              </button>
+              <button
+                onClick={() => {
+                  if (window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                  }
+                  setShowExitModal(false);
+                  onCancelExam();
+                }}
+                className="w-full sm:flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-rose-950/40 transition min-h-[44px]"
+              >
+                Exit Sitting
               </button>
             </div>
           </div>

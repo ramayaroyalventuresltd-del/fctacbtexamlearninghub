@@ -314,7 +314,36 @@ export default function App() {
   }
 
   // 4. LOGGED-IN: CANDIDATE CBT PORTAL
-  if (currentUser && userProgress) {
+  if (currentUser) {
+    if (!userProgress) {
+      return (
+        <AppLayout
+          user={currentUser}
+          onLogout={handleLogout}
+          activeView={activeAdminView}
+          onChangeView={setActiveAdminView}
+          questionBankCount={questionBankCount}
+          onOpenStandards={() => setShowStandardsModal(true)}
+          activeNavTab={activeNavTab}
+          onSelectNavTab={(tab) => {
+            if (tab === 'admin') {
+              setActiveAdminView('admin');
+              setActiveNavTab('admin');
+            } else {
+              setActiveAdminView('cbt');
+              setActiveNavTab(tab);
+            }
+          }}
+        >
+          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-3">
+            <div className="w-10 h-10 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-sm font-semibold text-slate-300">Loading Candidate Profile & CBT Sets...</p>
+            <p className="text-xs text-slate-500">Retrieving official civil service records for {currentUser.fullName}</p>
+          </div>
+        </AppLayout>
+      );
+    }
+
     return (
       <AppLayout
         user={currentUser}

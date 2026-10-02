@@ -9,7 +9,13 @@ import {
   User,
   AlertCircle,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  FileText,
+  Mail,
+  ShieldAlert
 } from 'lucide-react';
 
 interface AuthModalOrCardProps {
@@ -21,6 +27,11 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Password visibility toggles
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
+
   // Login form state
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -31,6 +42,7 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
   const [regUsername, setRegUsername] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [regCadre, setRegCadre] = useState(FCTA_CADRES[0].name);
   const [regGradeLevel, setRegGradeLevel] = useState('GL 08');
 
@@ -40,13 +52,23 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    setLoading(true);
 
+    const cleanId = loginIdentifier.trim();
+    if (!cleanId) {
+      setErrorMsg('Please enter your Staff Username, Email, or FCTA Staff/File No.');
+      return;
+    }
+    if (!loginPassword) {
+      setErrorMsg('Please enter your password.');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const user = await loginUser(loginIdentifier, loginPassword);
+      const user = await loginUser(cleanId, loginPassword);
       onSuccess(user);
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Login failed. Please verify credentials.');
+      setErrorMsg(err?.message || 'Login failed. Please verify your credentials.');
     } finally {
       setLoading(false);
     }
@@ -56,30 +78,55 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!regFullName.trim() || !regStaffId.trim() || !regUsername.trim() || !regPassword) {
-      setErrorMsg('Please complete all required fields.');
+    const cleanFullName = regFullName.trim();
+    const cleanStaffId = regStaffId.trim();
+    const cleanUsername = regUsername.trim().toLowerCase();
+    const cleanEmail = regEmail.trim();
+
+    if (!cleanFullName || cleanFullName.length < 3) {
+      setErrorMsg('Please enter officer full name (at least 3 characters).');
+      return;
+    }
+
+    if (!cleanStaffId) {
+      setErrorMsg('Please enter your official FCTA Staff or File Number.');
+      return;
+    }
+
+    if (!cleanUsername) {
+      setErrorMsg('Please choose a login username.');
+      return;
+    }
+
+    if (/\s/.test(cleanUsername)) {
+      setErrorMsg('Username cannot contain spaces. Use alphanumeric characters and underscores only.');
       return;
     }
 
     if (regPassword.length < 6) {
-      setErrorMsg('Password must be at least 6 characters.');
+      setErrorMsg('Password must be at least 6 characters long.');
+      return;
+    }
+
+    if (regPassword !== regConfirmPassword) {
+      setErrorMsg('Password and confirmation password do not match.');
       return;
     }
 
     setLoading(true);
     try {
       const user = await registerCandidate({
-        fullName: regFullName,
-        staffId: regStaffId,
-        username: regUsername,
-        email: regEmail || `${regUsername.toLowerCase()}@fcta.gov.ng`,
+        fullName: cleanFullName,
+        staffId: cleanStaffId,
+        username: cleanUsername,
+        email: cleanEmail || `${cleanUsername}@fcta.gov.ng`,
         password: regPassword,
         cadre: regCadre,
         gradeLevel: regGradeLevel
       });
       onSuccess(user);
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Registration failed. Please try again.');
+      setErrorMsg(err?.message || 'Registration failed. Please review your details and try again.');
     } finally {
       setLoading(false);
     }
@@ -136,13 +183,13 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
       </div>
 
       {/* Quick-Access Test Credentials */}
-      <div className="mb-6 p-3 rounded-xl bg-slate-950/70 border border-slate-800 text-xs">
+      <div className="mb-6 p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs">
         <div className="flex items-center justify-between mb-2">
           <span className="font-bold text-slate-300 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            Quick Demo / Admin Logins:
+            Quick Test & Administrative Logins:
           </span>
-          <span className="text-[10px] text-slate-500 hidden xs:inline">Auto-fill</span>
+          <span className="text-[10px] text-slate-500 hidden xs:inline">1-Click Auto-Fill</span>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -179,9 +226,9 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
       </div>
 
       {errorMsg && (
-        <div className="mb-5 p-3.5 rounded-xl bg-rose-950/50 border border-rose-500/50 text-rose-200 text-xs flex items-start gap-2.5">
+        <div className="mb-5 p-3.5 rounded-xl bg-rose-950/60 border border-rose-500/60 text-rose-200 text-xs flex items-start gap-2.5 animate-in fade-in">
           <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-          <span>{errorMsg}</span>
+          <span className="leading-relaxed">{errorMsg}</span>
         </div>
       )}
 
@@ -190,7 +237,7 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Staff Username or Official Email
+              Staff Username, File No., or Official Email
             </label>
             <div className="relative">
               <User className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
@@ -199,10 +246,13 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
                 required
                 value={loginIdentifier}
                 onChange={(e) => setLoginIdentifier(e.target.value)}
-                placeholder="e.g. Freelander, system, or your username"
+                placeholder="e.g. Freelander, system, FCTA/AGS/2019/4412"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition min-h-[44px]"
               />
             </div>
+            <p className="text-[10px] text-slate-400 mt-1">
+              You can log in with your desired username, official email, or FCTA Staff/File No.
+            </p>
           </div>
 
           <div>
@@ -212,13 +262,21 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
             <div className="relative">
               <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
               <input
-                type="password"
+                type={showLoginPassword ? 'text' : 'password'}
                 required
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="Enter password (e.g. 654321 for Freelander)"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition min-h-[44px]"
+                placeholder="Enter your portal password"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition min-h-[44px]"
               />
+              <button
+                type="button"
+                onClick={() => setShowLoginPassword(!showLoginPassword)}
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-200"
+                aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+              >
+                {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -253,14 +311,16 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
               <label className="block text-[11px] font-semibold text-slate-300 mb-1">
                 FCTA Staff / File No.
               </label>
-              <input
-                type="text"
-                required
-                value={regStaffId}
-                onChange={(e) => setRegStaffId(e.target.value)}
-                placeholder="e.g. FCTA/ADM/2024/098"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 min-h-[42px]"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  value={regStaffId}
+                  onChange={(e) => setRegStaffId(e.target.value.toUpperCase())}
+                  placeholder="e.g. FCTA/ADM/2024/098"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 min-h-[42px] uppercase"
+                />
+              </div>
             </div>
           </div>
 
@@ -273,7 +333,7 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
                 type="text"
                 required
                 value={regUsername}
-                onChange={(e) => setRegUsername(e.target.value)}
+                onChange={(e) => setRegUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
                 placeholder="e.g. busman"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 min-h-[42px]"
               />
@@ -287,7 +347,7 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
                 type="email"
                 value={regEmail}
                 onChange={(e) => setRegEmail(e.target.value)}
-                placeholder="e.g. busman@fcta.gov.ng"
+                placeholder={regUsername ? `${regUsername.toLowerCase()}@fcta.gov.ng` : 'officer@fcta.gov.ng'}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 min-h-[42px]"
               />
             </div>
@@ -333,7 +393,7 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
           {selectedTierInfo && (
             <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
               <span className="text-slate-400">
-                Mapped Difficulty Tier:
+                Mapped Civil Service Difficulty Tier:
               </span>
               <span className="font-bold text-emerald-400">
                 Tier {selectedTierNum} ({selectedTierInfo.title})
@@ -341,18 +401,62 @@ export const AuthModalOrCard: React.FC<AuthModalOrCardProps> = ({ onSuccess }) =
             </div>
           )}
 
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-              Create Portal Password (min. 6 chars)
-            </label>
-            <input
-              type="password"
-              required
-              value={regPassword}
-              onChange={(e) => setRegPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 min-h-[42px]"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                Password (min. 6 chars)
+              </label>
+              <div className="relative">
+                <input
+                  type={showRegPassword ? 'text' : 'password'}
+                  required
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-3 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 min-h-[42px]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRegPassword(!showRegPassword)}
+                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-200"
+                  aria-label={showRegPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showRegConfirmPassword ? 'text' : 'password'}
+                  required
+                  value={regConfirmPassword}
+                  onChange={(e) => setRegConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-3 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 min-h-[42px]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRegConfirmPassword(!showRegConfirmPassword)}
+                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-200"
+                  aria-label={showRegConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showRegConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {regConfirmPassword && regPassword !== regConfirmPassword && (
+                <p className="text-[10px] text-rose-400 mt-1">Passwords do not match</p>
+              )}
+              {regConfirmPassword && regPassword === regConfirmPassword && (
+                <p className="text-[10px] text-emerald-400 mt-1 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Passwords match
+                </p>
+              )}
+            </div>
           </div>
 
           <button

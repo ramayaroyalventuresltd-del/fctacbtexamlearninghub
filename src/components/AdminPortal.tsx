@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { UserProfile, Question, SubjectType, ExamAttempt } from '../types';
 import { FCTA_CADRES, DIFFICULTY_TIERS } from '../data/cadresAndLevels';
 import { PsychometricAnalytics } from './PsychometricAnalytics';
+import { UserManagementConsole } from './UserManagementConsole';
 import {
   getBaseQuestionBank,
   saveQuestionToBank,
@@ -18,6 +19,7 @@ import {
   Filter,
   Trash2,
   Users,
+  UserCog,
   CheckCircle2,
   Download,
   FileSpreadsheet,
@@ -35,7 +37,7 @@ interface AdminPortalProps {
 }
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({ currentUser, onNavigateToCbt }) => {
-  const [activeTab, setActiveTab] = useState<'bank' | 'upload' | 'attempts' | 'psychometrics' | 'superadmin'>('bank');
+  const [activeTab, setActiveTab] = useState<'bank' | 'upload' | 'attempts' | 'psychometrics' | 'users' | 'superadmin'>('bank');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -280,6 +282,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ currentUser, onNavigat
         >
           <Users className="w-4 h-4" />
           Candidate Test Attempts ({attempts.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+            activeTab === 'users'
+              ? 'bg-amber-600 text-white shadow-md shadow-amber-950/40'
+              : 'bg-slate-900 text-slate-400 hover:text-white'
+          }`}
+        >
+          <UserCog className="w-4 h-4" />
+          User Management Console
         </button>
 
         <button
@@ -649,6 +663,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ currentUser, onNavigat
         <PsychometricAnalytics attempts={attempts} questions={questions} />
       )}
 
+      {/* TAB: USER MANAGEMENT CONSOLE */}
+      {activeTab === 'users' && (
+        <UserManagementConsole currentUser={currentUser} />
+      )}
+
       {/* TAB 5: SUPER ADMIN PRIVILEGES (Freelander) */}
       {isSuperAdmin && activeTab === 'superadmin' && (
         <div className="bg-slate-900 border border-purple-500/30 rounded-2xl p-6 shadow-xl space-y-6">
@@ -673,6 +692,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ currentUser, onNavigat
                 <strong>Administrator:</strong> system (password: 123456 - Question management & review)<br />
                 <strong>Candidates:</strong> Registered FCTA officers (Exam and practice access)
               </p>
+              <button
+                onClick={() => setActiveTab('users')}
+                className="mt-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 transition"
+              >
+                <UserCog className="w-3.5 h-3.5" />
+                Launch User Management Console
+              </button>
             </div>
 
             <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
